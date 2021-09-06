@@ -1,0 +1,25 @@
+server: irc.libera.chat:+6697
+nickname: tungstite
+#username: tungstite
+#realname: tungstite
+password: tungstite:hunter2
+channels:
+  - "#services"
+
+sasl:
+  username: tungstite
+  password: hunter3
+
+oper:
+  name: tungstite
+  file: ~/oper.key
+  pass: hunter4
+
+patterns:
+  - 'postfix/qmgr[[]\S+ (?P<id>\S+): from=<(?P<from>noreply\.support@libera\.chat)>, '
+  - 'postfix/smtp[[]\S+ (?P<id>\S+): to=<(?P<to>\S+)>, .*? status=(?P<status>\S+) [(](?P<reason>.*)[)]$'
+  - 'postfix-submission/smtpd[[]\S+ NOQUEUE: (?P<status>\S+): (?P<reason>[^;]+); from=<(?P<from>\S+)> to=<(?P<to>\S+)>'
+
+log-file: /var/log/mail.info
+log-line: "PRIVMSG #services :EMAIL:STATUS: {email} {status}: {reason}"
+history: 100
