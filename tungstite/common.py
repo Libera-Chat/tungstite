@@ -32,3 +32,22 @@ class LimitedOrderedDict(
         super().move_to_end(key, last=False)
         if super().__len__() > self._max:
             super().popitem(last=True)
+
+SECONDS_MINUTES = 60
+SECONDS_HOURS   = SECONDS_MINUTES*60
+SECONDS_DAYS    = SECONDS_HOURS*24
+SECONDS_WEEKS   = SECONDS_DAYS*7
+
+def human_duration(total: int, max_units: int=2) -> str:
+    counts: List[int] = []
+    counts[0:2] = divmod(total,      SECONDS_WEEKS)
+    counts[1:3] = divmod(counts[-1], SECONDS_DAYS)
+    counts[2:4] = divmod(counts[-1], SECONDS_HOURS)
+    counts[3:5] = divmod(counts[-1], SECONDS_MINUTES)
+
+    outs: List[str] = []
+    for unit, i in zip("wdhms", counts):
+        if i > 0 and len(outs) < max_units:
+            outs.append(f"{i}{unit}")
+
+    return "".join(outs)

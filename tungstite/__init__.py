@@ -1,5 +1,6 @@
 import asyncio, time, traceback
 from collections import OrderedDict
+from datetime    import datetime
 from typing      import Dict, Optional
 from typing      import OrderedDict as TOrderedDict
 
@@ -12,7 +13,7 @@ from ircchallenge       import Challenge
 from ircstates.numerics import *
 from ircrobots.matching import Response, SELF, ANY
 
-from .common import EmailInfo, LimitedOrderedDict
+from .common import EmailInfo, LimitedOrderedDict, human_duration
 from .config import Config
 
 CAP_OPER = Capability(None, "solanum.chat/oper")
@@ -165,9 +166,13 @@ class Server(BaseServer):
             email = args[0]
             key   = email.lower()
             if key in self._emails:
-                info = self._emails[key]
+                info  = self._emails[key]
+                ts    = datetime.utcfromtimestamp(info.ts).isoformat()
+                since = human_duration(int(time.time()-info.ts))
+
                 return [
-                    f"{info.to} is \x02{info.status}\x02: {info.reason}"
+                    f"{ts} ({since} ago)"
+                    f" {info.to} is \x02{info.status}\x02: {info.reason}"
                 ]
             else:
                 return [f"I don't have {email} in my history"]
