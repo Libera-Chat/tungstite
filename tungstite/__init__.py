@@ -93,7 +93,7 @@ class Server(BaseServer):
                 if (info.finalised() and
                         info._from in self._config.froms):
 
-                    self._emails[info.to] = info
+                    self._emails[info.to.lower()] = info
                     log = self._config.log_line.format(**{
                         "email":  info.to,
                         "status": info.status,
