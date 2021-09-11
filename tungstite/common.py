@@ -8,6 +8,9 @@ class EmailInfo:
     status: Optional[str] = None
     reason: Optional[str] = None
 
+    def finalised(self) -> bool:
+        return all([self.to, self._from, self.status, self.reason])
+
 TKey   = TypeVar("TKey")
 TValue = TypeVar("TValue")
 

@@ -29,7 +29,9 @@ class Server(BaseServer):
             config: Config):
 
         self._config = config
-        self._emails: TOrderedDict[str, EmailInfo] = \
+        self._email_queue: TOrderedDict[str, EmailInfo] = \
+            LimitedOrderedDict(8)
+        self._emails:      TOrderedDict[str, EmailInfo] = \
             LimitedOrderedDict(config.history)
 
         super().__init__(bot, name)
@@ -66,15 +68,38 @@ class Server(BaseServer):
                     await self.send(build("CHALLENGE", [f"+{retort}"]))
                     break
 
-    async def email_sent(self, info: EmailInfo):
-        self._emails[info.to.lower()] = info
+    async def log_read_line(self, line: str):
+        for pattern in self._config.patterns:
+            if match := pattern.search(line):
+                groups = dict(match.groupdict())
 
-        log = self._config.log_line.format(**{
-            "email":  info.to,
-            "status": info.status,
-            "reason": info.reason
-        })
-        await self.send_raw(log)
+                if "id" in groups:
+                    id = groups["id"]
+                    if not id in queue:
+                        sefl._email_queue[id] = EmailInfo()
+                    info = self._email_queue[id]
+                else:
+                    info = EmailInfo()
+
+                if "to" in groups:
+                    info.to     = groups["to"]
+                if "from" in groups:
+                    info._from  = groups["from"]
+                if "status" in groups:
+                    info.status = groups["status"]
+                if "reason" in groups:
+                    info.reason = groups["reason"]
+
+                if (info.finalised() and
+                        info._from in self._config.froms):
+
+                    self._emails[info.to] = info
+                    log = self._config.log_line.format(**{
+                        "email":  info.to,
+                        "status": info.status,
+                        "reason": info.reason
+                    })
+                    await self.send_raw(log)
 
     async def line_read(self, line: Line):
         if line.command == RPL_WELCOME:

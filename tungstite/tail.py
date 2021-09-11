@@ -27,37 +27,9 @@ async def tail_log_file(
         while True:
             line = await file.readline()
             if line is not None:
-                for pattern in patterns:
-                    if match := pattern.search(line):
-                        groups = dict(match.groupdict())
-
-                        if "id" in groups:
-                            id = groups["id"]
-                            if not id in queue:
-                                queue[id] = EmailInfo()
-                            info = queue[id]
-                        else:
-                            info = EmailInfo()
-
-                        if "to" in groups:
-                            info.to     = groups["to"]
-                        if "from" in groups:
-                            info._from  = groups["from"]
-                        if "status" in groups:
-                            info.status = groups["status"]
-                        if "reason" in groups:
-                            info.reason = groups["reason"]
-
-                        if (info.to is not None and
-                                info._from  is not None and
-                                info.status is not None and
-                                info.reason is not None):
-
-                            servers = list(bot.servers.values())
-                            if servers:
-                                await servers[0].email_sent(info)
-
-                        break
+                servers = list(bot.servers.values())
+                if servers:
+                    await servers[0].log_read_line(line)
             else:
                 asyncio.sleep(0.1)
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from os.path     import expanduser
 from re          import compile as re_compile
-from typing      import Any, List, Optional, Pattern, Tuple
+from typing      import Any, List, Optional, Pattern, Set, Tuple
 
 import yaml
 
@@ -19,6 +19,7 @@ class Config(object):
     log_file: str
     log_line: str
     patterns: List[Pattern]
+    froms:    Set[str]
     history:  int
 
 def load(filepath: str):
@@ -52,5 +53,6 @@ def load(filepath: str):
         expanduser(config_yaml["log-file"]),
         config_yaml["log-line"],
         [re_compile(p) for p in config_yaml["patterns"]],
+        set(config_yaml["froms"]),
         config_yaml["history"]
     )

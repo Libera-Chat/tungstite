@@ -16,9 +16,12 @@ oper:
   pass: hunter4
 
 patterns:
-  - 'postfix/qmgr[[]\S+ (?P<id>\S+): from=<(?P<from>noreply\.support@libera\.chat)>, '
+  - 'postfix/qmgr[[]\S+ (?P<id>\S+): from=<(?P<from>\S+)>, '
   - 'postfix/smtp[[]\S+ (?P<id>\S+): to=<(?P<to>\S+)>, .*? status=(?P<status>\S+) [(](?P<reason>.*)[)]$'
-  - 'postfix-submission/smtpd[[]\S+ NOQUEUE: (?P<status>\S+): (?P<reason>[^;]+); from=<(?P<from>noreply\.support@libera\.chat)> to=<(?P<to>\S+)>'
+  - 'postfix-submission/smtpd[[]\S+ NOQUEUE: (?P<status>\S+): (?P<reason>[^;]+); from=<(?P<from>\S+)> to=<(?P<to>\S+)>'
+
+froms:
+  - noreply.support@libera.chat
 
 log-file: /var/log/mail.info
 log-line: "PRIVMSG #services :EMAIL:STATUS: {email} {status}: {reason}"
