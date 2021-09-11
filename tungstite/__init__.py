@@ -131,9 +131,9 @@ class Server(BaseServer):
                     line.tags
                 )
             elif (self.is_channel(target) and
-                    line.params[1].startswith("!")):
+                    message.startswith("!")):
                 # a channel command
-                # [1:] to cut off !
+                # [1:] to cut off "!"
                 cmd, _, args = message[1:].partition(" ")
                 await self.cmd(
                     line.hostmask.nickname,
@@ -142,6 +142,22 @@ class Server(BaseServer):
                     args,
                     line.tags
                 )
+
+            elif (self.is_channel(target) and
+                    len(parts := message.split(None, 1)) > 1):
+
+                nick  = self.nickname_lower
+                pings = {f"{nick}{c}" for c in [":", "," ""]}
+                if self.casefold(parts[0]) in pings:
+                    # a channel highlight command
+                    cmd, _, args = parts[1].partition(" ")
+                    await self.cmd(
+                        line.hostmask.nickname,
+                        target,
+                        cmd.lower(),
+                        args,
+                        line.tags
+                    )
 
     async def cmd(self,
             who:     str,
