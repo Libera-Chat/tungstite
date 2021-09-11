@@ -1,4 +1,4 @@
-import asyncio, traceback
+import asyncio, time, traceback
 from collections import OrderedDict
 from typing      import Dict, Optional
 from typing      import OrderedDict as TOrderedDict
@@ -69,17 +69,18 @@ class Server(BaseServer):
                     break
 
     async def log_read_line(self, line: str):
+        now = int(time.time())
         for pattern in self._config.patterns:
             if match := pattern.search(line):
                 groups = dict(match.groupdict())
 
                 if "id" in groups:
                     id = groups["id"]
-                    if not id in queue:
-                        sefl._email_queue[id] = EmailInfo()
+                    if not id in self._email_queue:
+                        self._email_queue[id] = EmailInfo(now)
                     info = self._email_queue[id]
                 else:
-                    info = EmailInfo()
+                    info = EmailInfo(now)
 
                 if "to" in groups:
                     info.to     = groups["to"]

@@ -8,6 +8,9 @@ class EmailInfo:
     status: Optional[str] = None
     reason: Optional[str] = None
 
+    def __init__(self, ts: int):
+        self.ts = ts
+
     def finalised(self) -> bool:
         return all([self.to, self._from, self.status, self.reason])
 
