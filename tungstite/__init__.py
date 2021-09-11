@@ -125,7 +125,7 @@ class Server(BaseServer):
                 cmd, _, args = message.partition(" ")
                 await self.cmd(
                     line.hostmask.nickname,
-                    self.nickname,
+                    line.hostmask.nickname,
                     cmd.lower(),
                     args,
                     line.tags
