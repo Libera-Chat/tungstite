@@ -26,7 +26,7 @@ async def tail_log_file(
 
         while True:
             line = await file.readline()
-            if line is not None:
+            if line == "":
                 servers = list(bot.servers.values())
                 if servers:
                     await servers[0].log_read_line(line)
