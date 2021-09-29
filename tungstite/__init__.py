@@ -75,8 +75,8 @@ class Server(BaseServer):
             if match := pattern.search(line):
                 groups = dict(match.groupdict())
 
-                if "id" in groups:
-                    id = groups["id"]
+                id = groups.get("id", None)
+                if id is not None:
                     if not id in self._email_queue:
                         self._email_queue[id] = EmailInfo(now)
                     info = self._email_queue[id]
@@ -95,7 +95,9 @@ class Server(BaseServer):
                 if (info.finalised() and
                         info._from in self._config.froms):
 
-                    self._emails[info.to.lower()] = info
+                    if id is not None:
+                        del self._email_queue[id]
+
                     log = self._config.log_line.format(**{
                         "email":  info.to,
                         "status": info.status,
