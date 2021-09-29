@@ -31,7 +31,7 @@ async def tail_log_file(
                 if servers:
                     await servers[0].log_read_line(line)
             else:
-                asyncio.sleep(0.1)
+                await asyncio.sleep(0.1)
 
             if not os.path.isfile(filename):
                 # we've been rotated, but no new file yet
