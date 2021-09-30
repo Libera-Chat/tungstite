@@ -98,6 +98,8 @@ class Server(BaseServer):
                     if id is not None:
                         del self._email_queue[id]
 
+                    self._emails[info.to.lower()] = info
+
                     log = self._config.log_line.format(**{
                         "email":  info.to,
                         "status": info.status,
