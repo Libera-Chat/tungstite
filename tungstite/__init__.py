@@ -28,10 +28,12 @@ class Server(BaseServer):
             config: Config):
 
         self._config = config
+
         self._emails_incomplete: LimitedOrderedDict[str, EmailInfo] = \
             LimitedOrderedDict(8)
-        self._emails_complete:   LimitedOrderedDict[str, EmailInfo] = \
-            LimitedOrderedDict(config.history)
+
+        self._emails_complete:   LimitedList[Tuple[str, EmailInfo]] = \
+            LimitedList(config.history)
 
         super().__init__(bot, name)
         self.desired_caps.add(CAP_OPER)
@@ -67,6 +69,14 @@ class Server(BaseServer):
                     await self.send(build("CHALLENGE", [f"+{retort}"]))
                     break
 
+    async def _print_log(self, info: EmailInfo):
+        log = self._config.log_line.format(**{
+            "email":  info.to,
+            "status": info.status,
+            "reason": info.reason
+        })
+        await self.send_raw(log)
+
     async def log_read_line(self, line: str):
         now = int(time.time())
         for pattern in self._config.patterns:
@@ -96,14 +106,9 @@ class Server(BaseServer):
                     if id is not None:
                         del self._emails_incomplete[id]
 
-                    self._emails_complete[info.to.lower()] = info
-
-                    log = self._config.log_line.format(**{
-                        "email":  info.to,
-                        "status": info.status,
-                        "reason": info.reason
-                    })
-                    await self.send_raw(log)
+                    cache_key = cast(str, info.to).lower()
+                    self._emails_complete.add((cache_key, info))
+                    await self._print_log(info)
 
     async def line_read(self, line: Line):
         if line.command == RPL_WELCOME:
@@ -181,19 +186,22 @@ class Server(BaseServer):
 
         args = sargs.split(None, 1)
         if args:
-            email = args[0]
-            key   = email.lower()
-            if key in self._emails_complete:
-                info  = self._emails_complete[key]
-                ts    = datetime.utcfromtimestamp(info.ts).isoformat()
-                since = human_duration(int(time.time()-info.ts))
+            email      = args[0]
+            search_key = email.lower()
 
-                return [
-                    f"{ts} ({since} ago)"
-                    f" {info.to} is \x02{info.status}\x02: {info.reason}"
-                ]
-            else:
-                return [f"I don't have {email} in my history"]
+            outs: List[str] = []
+            for cache_key, info in self._emails_complete:
+                if cache_key == search_key:
+                    ts    = datetime.utcfromtimestamp(info.ts).isoformat()
+                    since = human_duration(int(time.time()-info.ts))
+                    outs.append(
+                        f"{ts} ({since} ago)"
+                        f" {info.to} is \x02{info.status}\x02:"
+                        f" {info.reason}"
+                    )
+
+            # [:3] so we show, at max, the 3 most recent states
+            return outs[:3] or [f"I don't have {email} in my history"]
         else:
             return ["Please provide an email address"]
 

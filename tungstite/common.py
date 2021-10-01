@@ -1,6 +1,6 @@
-from collections import OrderedDict
+from collections import deque, OrderedDict
 from typing      import OrderedDict as TOrderedDict
-from typing      import Generic, List, Optional, TypeVar
+from typing      import Deque, Generic, Iterator, List, Optional, TypeVar
 
 class EmailInfo:
     to:     Optional[str] = None
@@ -40,6 +40,19 @@ class LimitedOrderedDict(Generic[TKey, TValue]):
 
     def __delitem__(self, key: TKey):
         del self._dict[key]
+
+class LimitedList(Generic[TKey]):
+    def __init__(self, max: int):
+        self._max = max
+        self._items: Deque[TKey] = deque()
+
+    def __iter__(self) -> Iterator[TKey]:
+        return self._items.__iter__()
+
+    def add(self, item: TKey):
+        self._items.appendleft(item)
+        if len(self._items) > self._max:
+            self._items.pop()
 
 SECONDS_MINUTES = 60
 SECONDS_HOURS   = SECONDS_MINUTES*60
