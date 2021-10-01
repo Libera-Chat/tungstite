@@ -9,7 +9,8 @@ class EmailInfo:
     status: Optional[str] = None
     reason: Optional[str] = None
 
-    def __init__(self, ts: int):
+    def __init__(self, id: str, ts: int):
+        self.id = id
         self.ts = ts
 
     def finalised(self) -> bool:

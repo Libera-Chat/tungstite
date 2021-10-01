@@ -1,6 +1,7 @@
 import asyncio, time, traceback
 from datetime    import datetime
-from typing      import cast, Dict, List, Optional, Tuple
+from typing      import cast, Dict, Iterable, List, Optional, Tuple
+from uuid        import uuid4
 
 from irctokens import build, Line
 from ircrobots import Capability
@@ -85,13 +86,10 @@ class Server(BaseServer):
             if match := pattern.search(line):
                 groups = dict(match.groupdict())
 
-                id = groups.get("id", None)
-                if id is not None:
-                    if not id in self._emails_incomplete:
-                        self._emails_incomplete[id] = EmailInfo(now)
-                    info = self._emails_incomplete[id]
-                else:
-                    info = EmailInfo(now)
+                id = groups.get("id", str(uuid4()))
+                if not id in self._emails_incomplete:
+                    self._emails_incomplete[id] = EmailInfo(id, now)
+                info = self._emails_incomplete[id]
 
                 if "to" in groups:
                     info.to     = groups["to"]
@@ -105,17 +103,14 @@ class Server(BaseServer):
                 if (info.finalised() and
                         info._from in self._config.froms):
 
-                    if id is None:
-                        await self._print_log(info)
-                    else:
-                        del self._emails_incomplete[id]
+                    del self._emails_incomplete[id]
 
-                        # only log when a queued email's status changes
-                        status = cast(str, info.status)
-                        if (id not in STATUS_CACHE or
-                                not STATUS_CACHE[id] == status):
-                            STATUS_CACHE[id] = status
-                            await self._print_log(info)
+                    # only log when a queued email's status changes
+                    status = cast(str, info.status)
+                    if (id not in STATUS_CACHE or
+                            not STATUS_CACHE[id] == status):
+                        STATUS_CACHE[id] = status
+                        await self._print_log(info)
 
                     cache_key = cast(str, info.to).lower()
                     self._emails_complete.add((cache_key, info))
