@@ -1,10 +1,10 @@
 import asyncio, os
 from collections import OrderedDict
-from typing      import AsyncIterator, List, Optional, Pattern
+from typing      import AsyncIterator, cast, List, Optional, Pattern
 from typing      import OrderedDict as TOrderedDict
 
 import aiofiles
-from .       import Bot
+from .       import Bot, Server
 from .common import EmailInfo, LimitedOrderedDict
 
 async def tail_log_file(
@@ -29,7 +29,8 @@ async def tail_log_file(
             if not line == "":
                 servers = list(bot.servers.values())
                 if servers:
-                    await servers[0].log_read_line(line)
+                    server = cast(Server, servers[0])
+                    await server.log_read_line(line)
             else:
                 await asyncio.sleep(0.1)
 
