@@ -100,20 +100,19 @@ class Server(BaseServer):
                 if "reason" in groups:
                     info.reason = groups["reason"]
 
-                if (info.finalised() and
-                        info._from in self._config.froms):
-
+                if info.finalised():
                     del self._emails_incomplete[id]
 
-                    # only log when a queued email's status changes
-                    status = cast(str, info.status)
-                    if (id not in STATUS_CACHE or
-                            not STATUS_CACHE[id] == status):
-                        STATUS_CACHE[id] = status
-                        await self._print_log(info)
+                    if info._from in self._config.froms:
+                        # only log when a queued email's status changes
+                        status = cast(str, info.status)
+                        if (id not in STATUS_CACHE or
+                                not STATUS_CACHE[id] == status):
+                            STATUS_CACHE[id] = status
+                            await self._print_log(info)
 
-                    cache_key = cast(str, info.to).lower()
-                    self._emails_complete.add((cache_key, info))
+                        cache_key = cast(str, info.to).lower()
+                        self._emails_complete.add((cache_key, info))
 
     async def line_read(self, line: Line):
         if line.command == RPL_WELCOME:
