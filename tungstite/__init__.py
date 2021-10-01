@@ -22,8 +22,6 @@ RPL_RSACHALLENGE2      = "740"
 RPL_ENDOFRSACHALLENGE2 = "741"
 RPL_YOUREOPER          = "381"
 
-STATUS_CACHE: Dict[str, str] = {}
-
 class Server(BaseServer):
     def __init__(self,
             bot:    BaseBot,
@@ -72,6 +70,18 @@ class Server(BaseServer):
                     await self.send(build("CHALLENGE", [f"+{retort}"]))
                     break
 
+    def _emails_by_to(self, search_key: str) -> Iterable[EmailInfo]:
+        outs: List[EmailInfo] = []
+        for cache_key, info in self._emails_complete:
+            if cache_key == search_key:
+                outs.append(info)
+        return outs
+    def _email_by_id(self, id: str) -> Optional[EmailInfo]:
+        for _, info in self._emails_complete:
+            if info.id == id:
+                return info
+        return None
+
     async def _print_log(self, info: EmailInfo):
         log = self._config.log_line.format(**{
             "email":  info.to,
@@ -104,11 +114,12 @@ class Server(BaseServer):
                     del self._emails_incomplete[id]
 
                     if info._from in self._config.froms:
+                        last_info = self._email_by_id(id)
+                        status    = cast(str, info.status)
+
                         # only log when a queued email's status changes
-                        status = cast(str, info.status)
-                        if (id not in STATUS_CACHE or
-                                not STATUS_CACHE[id] == status):
-                            STATUS_CACHE[id] = status
+                        if (last_info is None or
+                                not last_info.status == status):
                             await self._print_log(info)
 
                         cache_key = cast(str, info.to).lower()
@@ -194,17 +205,16 @@ class Server(BaseServer):
             search_key = email.lower()
 
             outs: List[str] = []
-            for cache_key, info in self._emails_complete:
-                if cache_key == search_key:
-                    ts    = datetime.utcfromtimestamp(info.ts).isoformat()
-                    since = human_duration(int(time.time()-info.ts))
-                    outs.append(
-                        f"{ts} ({since} ago)"
-                        f" {info.to} is \x02{info.status}\x02:"
-                        f" {info.reason}"
-                    )
+            for info in self._emails_by_to(search_key):
+                ts    = datetime.utcfromtimestamp(info.ts).isoformat()
+                since = human_duration(int(time.time()-info.ts))
+                outs.append(
+                    f"{ts} ({since} ago)"
+                    f" {info.to} is \x02{info.status}\x02:"
+                    f" {info.reason}"
+                )
 
-            # [:3] so we show, at max, the 3 most recent states
+            # [:3] so we show, at max, the 3 most recent statuses
             return outs[:3] or [f"I don't have {email} in my history"]
         else:
             return ["Please provide an email address"]
