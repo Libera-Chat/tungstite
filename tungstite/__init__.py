@@ -21,6 +21,8 @@ RPL_RSACHALLENGE2      = "740"
 RPL_ENDOFRSACHALLENGE2 = "741"
 RPL_YOUREOPER          = "381"
 
+STATUS_CACHE: Dict[str, str] = {}
+
 class Server(BaseServer):
     def __init__(self,
             bot:    BaseBot,
@@ -103,12 +105,20 @@ class Server(BaseServer):
                 if (info.finalised() and
                         info._from in self._config.froms):
 
-                    if id is not None:
+                    if id is None:
+                        await self._print_log(info)
+                    else:
                         del self._emails_incomplete[id]
+
+                        # only log when a queued email's status changes
+                        status = cast(str, info.status)
+                        if (id not in STATUS_CACHE or
+                                not STATUS_CACHE[id] == status):
+                            STATUS_CACHE[id] = status
+                            await self._print_log(info)
 
                     cache_key = cast(str, info.to).lower()
                     self._emails_complete.add((cache_key, info))
-                    await self._print_log(info)
 
     async def line_read(self, line: Line):
         if line.command == RPL_WELCOME:
