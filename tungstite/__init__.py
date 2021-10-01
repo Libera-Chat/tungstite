@@ -1,8 +1,6 @@
 import asyncio, time, traceback
-from collections import OrderedDict
 from datetime    import datetime
-from typing      import Dict, Optional
-from typing      import OrderedDict as TOrderedDict
+from typing      import cast, Dict, List, Optional, Tuple
 
 from irctokens import build, Line
 from ircrobots import Capability
@@ -13,7 +11,7 @@ from ircchallenge       import Challenge
 from ircstates.numerics import *
 from ircrobots.matching import Response, SELF, ANY
 
-from .common import EmailInfo, LimitedOrderedDict, human_duration
+from .common import EmailInfo, human_duration, LimitedList, LimitedOrderedDict
 from .config import Config
 
 CAP_OPER = Capability(None, "solanum.chat/oper")
@@ -30,9 +28,9 @@ class Server(BaseServer):
             config: Config):
 
         self._config = config
-        self._email_queue: TOrderedDict[str, EmailInfo] = \
+        self._emails_incomplete: LimitedOrderedDict[str, EmailInfo] = \
             LimitedOrderedDict(8)
-        self._emails:      TOrderedDict[str, EmailInfo] = \
+        self._emails_complete:   LimitedOrderedDict[str, EmailInfo] = \
             LimitedOrderedDict(config.history)
 
         super().__init__(bot, name)
@@ -77,9 +75,9 @@ class Server(BaseServer):
 
                 id = groups.get("id", None)
                 if id is not None:
-                    if not id in self._email_queue:
-                        self._email_queue[id] = EmailInfo(now)
-                    info = self._email_queue[id]
+                    if not id in self._emails_incomplete:
+                        self._emails_incomplete[id] = EmailInfo(now)
+                    info = self._emails_incomplete[id]
                 else:
                     info = EmailInfo(now)
 
@@ -96,9 +94,9 @@ class Server(BaseServer):
                         info._from in self._config.froms):
 
                     if id is not None:
-                        del self._email_queue[id]
+                        del self._emails_incomplete[id]
 
-                    self._emails[info.to.lower()] = info
+                    self._emails_complete[info.to.lower()] = info
 
                     log = self._config.log_line.format(**{
                         "email":  info.to,
@@ -185,8 +183,8 @@ class Server(BaseServer):
         if args:
             email = args[0]
             key   = email.lower()
-            if key in self._emails:
-                info  = self._emails[key]
+            if key in self._emails_complete:
+                info  = self._emails_complete[key]
                 ts    = datetime.utcfromtimestamp(info.ts).isoformat()
                 since = human_duration(int(time.time()-info.ts))
 

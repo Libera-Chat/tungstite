@@ -1,5 +1,6 @@
 from collections import OrderedDict
-from typing      import MutableMapping, Optional, TypeVar
+from typing      import OrderedDict as TOrderedDict
+from typing      import Generic, List, Optional, TypeVar
 
 class EmailInfo:
     to:     Optional[str] = None
@@ -17,21 +18,28 @@ class EmailInfo:
 TKey   = TypeVar("TKey")
 TValue = TypeVar("TValue")
 
-class LimitedOrderedDict(
-        OrderedDict,
-        MutableMapping[TKey, TValue]
-):
+class LimitedOrderedDict(Generic[TKey, TValue]):
     def __init__(self, max: int):
         self._max = max
+        self._dict: TOrderedDict[TKey, TValue] = OrderedDict()
+
+    def __contains__(self, key: TKey) -> bool:
+        return key in self._dict
+
+    def __getitem__(self, key: TKey) -> TValue:
+        return self._dict[key]
 
     def __setitem__(self,
             key:   TKey,
             value: TValue):
 
-        super().__setitem__(key, value)
-        super().move_to_end(key, last=False)
-        if super().__len__() > self._max:
-            super().popitem(last=True)
+        self._dict[key] = value
+        self._dict.move_to_end(key, last=False)
+        if len(self._dict) > self._max:
+            self._dict.popitem(last=True)
+
+    def __delitem__(self, key: TKey):
+        del self._dict[key]
 
 SECONDS_MINUTES = 60
 SECONDS_HOURS   = SECONDS_MINUTES*60
