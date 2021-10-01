@@ -195,7 +195,7 @@ class Server(BaseServer):
                 for out in outs:
                     await self.send(build("NOTICE", [target, out]))
 
-    async def cmd_emailstate(self,
+    async def cmd_emailstatus(self,
             nick:  str,
             sargs: str):
 
