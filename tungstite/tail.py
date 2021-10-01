@@ -13,8 +13,6 @@ async def tail_log_file(
         patterns: List[Pattern]
         ):
 
-    queue: TOrderedDict[str, EmailInfo] = LimitedOrderedDict(max=8)
-
     seek = True
     while True:
         file  = await aiofiles.open(filename, "r")
