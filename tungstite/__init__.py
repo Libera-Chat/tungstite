@@ -1,4 +1,4 @@
-import asyncio, time, traceback
+import asyncio, re, time, traceback
 from datetime    import datetime
 from typing      import cast, Dict, Iterable, List, Optional, Tuple
 from uuid        import uuid4
@@ -10,12 +10,23 @@ from ircrobots import Server as BaseServer
 
 from ircchallenge       import Challenge
 from ircstates.numerics import *
-from ircrobots.matching import Response, SELF, ANY
+from ircrobots.matching import Response, SELF, ANY, Nick, Regex, Formatless
 
 from .common import EmailInfo, human_duration, LimitedList, LimitedOrderedDict
 from .config import Config
 
 CAP_OPER = Capability(None, "solanum.chat/oper")
+RE_EMAIL = r"^Email\s*: (\S+)$"
+
+NICKSERV      = Nick("nickserv")
+NS_INFO_END   = Response(
+    "NOTICE", [SELF, Formatless("*** End of Info ***")], NICKSERV
+)
+NS_INFO_NONE  = Response(
+    "NOTICE", [SELF, Regex(r"^\S+ is not registered.$")], NICKSERV
+)
+NS_INFO_EMAIL = Response("NOTICE", [SELF, Regex(RE_EMAIL)], NICKSERV)
+
 
 # not in ircstates yet...
 RPL_RSACHALLENGE2      = "740"
@@ -69,6 +80,17 @@ class Server(BaseServer):
                     retort = challenge.finalise()
                     await self.send(build("CHALLENGE", [f"+{retort}"]))
                     break
+    async def _get_nickserv_email(self, query: str) -> Optional[str]:
+        await self.send(build("NS", ["INFO", query]))
+        line = await self.wait_for({
+            NS_INFO_EMAIL, NS_INFO_NONE, NS_INFO_END
+        })
+
+        email_match = re.match(RE_EMAIL, line.params[1])
+        if email_match is not None:
+            return email_match.group(1)
+        else:
+            return None
 
     def _emails_by_to(self, search_key: str) -> Iterable[EmailInfo]:
         outs: List[EmailInfo] = []
@@ -200,24 +222,32 @@ class Server(BaseServer):
             sargs: str):
 
         args = sargs.split(None, 1)
-        if args:
-            email      = args[0]
-            search_key = email.lower()
-
-            outs: List[str] = []
-            for info in self._emails_by_to(search_key):
-                ts    = datetime.utcfromtimestamp(info.ts).isoformat()
-                since = human_duration(int(time.time()-info.ts))
-                outs.append(
-                    f"{ts} ({since} ago)"
-                    f" {info.to} is \x02{info.status}\x02:"
-                    f" {info.reason}"
-                )
-
-            # [:3] so we show, at max, the 3 most recent statuses
-            return outs[:3] or [f"I don't have {email} in my history"]
-        else:
+        if not args:
             return ["Please provide an email address"]
+
+        target = args[0]
+        if not "@" in target:
+            email_ = await self._get_nickserv_email(target)
+            if email_ is None:
+                return [f"Can't get email for account {target}"]
+            email = email_
+        else:
+            email = target
+
+        search_key = email.lower()
+
+        outs: List[str] = []
+        for info in self._emails_by_to(search_key):
+            ts    = datetime.utcfromtimestamp(info.ts).isoformat()
+            since = human_duration(int(time.time()-info.ts))
+            outs.append(
+                f"{ts} ({since} ago)"
+                f" {info.to} is \x02{info.status}\x02:"
+                f" {info.reason}"
+            )
+
+        # [:3] so we show, at max, the 3 most recent statuses
+        return outs[:3] or [f"I don't have {email} in my history"]
 
     def line_preread(self, line: Line):
         print(f"< {line.format()}")
