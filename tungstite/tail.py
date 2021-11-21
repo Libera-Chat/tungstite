@@ -15,7 +15,7 @@ async def tail_log_file(
 
     seek = True
     while True:
-        file  = await aiofiles.open(filename, "r")
+        file  = await aiofiles.open(filename, "rb")
         inode = os.stat(file.fileno()).st_ino
         if seek:
             seek = False
@@ -24,7 +24,7 @@ async def tail_log_file(
 
         while True:
             line = await file.readline()
-            if not line == "":
+            if not line == b"":
                 servers = list(bot.servers.values())
                 if servers:
                     server = cast(Server, servers[0])

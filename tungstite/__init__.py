@@ -112,7 +112,12 @@ class Server(BaseServer):
         })
         await self.send_raw(log)
 
-    async def log_read_line(self, line: str):
+    async def log_read_line(self, bline: bytes):
+        try:
+            line = bline.decode("utf8")
+        except UnicodeDecodeError:
+            line = bline.decode("latin-1")
+
         now = int(time.time())
         for pattern in self._config.patterns:
             if match := pattern.search(line):
