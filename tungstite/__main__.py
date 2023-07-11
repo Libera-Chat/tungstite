@@ -10,24 +10,18 @@ from .tail   import tail_log_file
 async def main(config: Config):
     bot = Bot(config)
 
-    host, port, tls      = config.server
     sasl_user, sasl_pass = config.sasl
 
-    params = ConnectionParams(
-        config.nickname,
-        host,
-        port,
-        tls,
-        username=config.username,
-        realname=config.realname,
-        password=config.password,
-        sasl=SASLUserPass(sasl_user, sasl_pass),
-        autojoin=config.channels
-    )
-    await bot.add_server(host, params)
+    params = ConnectionParams.from_hoststring(config.nickname, config.server)
+    params.realname = config.realname
+    params.password = config.password
+    params.sasl = SASLUserPass(sasl_user, sasl_pass)
+    params.autojoin = config.channels
+
+    await bot.add_server("irc", params)
     await asyncio.wait([
-        tail_log_file(bot, config.log_file, config.patterns),
-        bot.run()
+        asyncio.create_task(tail_log_file(bot, config.log_file, config.patterns)),
+        asyncio.create_task(bot.run())
     ])
 
 if __name__ == "__main__":
